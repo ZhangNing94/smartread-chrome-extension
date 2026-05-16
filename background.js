@@ -4,6 +4,12 @@
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 const FREE_DAILY_LIMIT = 10;
 
+// --- API Key Decoding ---
+function decodeApiKey(encoded) {
+  if (!encoded) return '';
+  return encoded.split(',').map(c => String.fromCharCode(parseInt(c))).join('');
+}
+
 // --- Context Menu Setup ---
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -137,15 +143,17 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
 
-  // Get API key
-  const { apiKey } = await chrome.storage.sync.get('apiKey');
-  if (!apiKey) {
+  // Retrieve and decode API key
+  const { apiKey: encodedKey } = await chrome.storage.sync.get('apiKey');
+  if (!encodedKey) {
     chrome.tabs.sendMessage(tab.id, {
       action: 'showError',
       error: '请先设置 DeepSeek API Key。点击扩展图标进入设置。'
     }).catch(() => {});
     return;
   }
+
+  const apiKey = decodeApiKey(encodedKey);
 
   // Check usage limit
   const withinLimit = await checkUsageLimit();

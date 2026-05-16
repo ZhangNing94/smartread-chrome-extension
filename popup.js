@@ -1,5 +1,15 @@
 // SmartRead - Popup Script
 
+// --- API Key Encoding/Decoding ---
+function encodeApiKey(key) {
+  return key.split('').map(c => c.charCodeAt(0)).join(',');
+}
+
+function decodeApiKey(encoded) {
+  if (!encoded) return '';
+  return encoded.split(',').map(c => String.fromCharCode(parseInt(c))).join('');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // --- Load saved settings ---
   loadSettings();
@@ -40,8 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Encode before storing - hide from plain-text storage
+    const encodedKey = encodeApiKey(apiKey);
     chrome.storage.sync.set({
-      apiKey: apiKey,
+      apiKey: encodedKey,
       defaultMode: defaultMode
     }, () => {
       showMsg('✅ 设置已保存', 'success');
@@ -61,7 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadSettings() {
   chrome.storage.sync.get(['apiKey', 'defaultMode'], (result) => {
     if (result.apiKey) {
-      document.getElementById('apiKey').value = result.apiKey;
+      // Decode stored value
+      const decodedKey = decodeApiKey(result.apiKey);
+      document.getElementById('apiKey').value = decodedKey;
     }
     if (result.defaultMode) {
       document.getElementById('defaultMode').value = result.defaultMode;
