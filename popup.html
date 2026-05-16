@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartRead</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <span class="logo">🤖</span>
+      <div>
+        <h1>SmartRead</h1>
+        <p class="subtitle">AI 网页摘要助手</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="settings">⚙️ 设置</button>
+      <button class="tab" data-tab="usage">📊 用量</button>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="tab-content">
+      <div class="form-group">
+        <label for="apiKey">DeepSeek API Key</label>
+        <input
+          type="password"
+          id="apiKey"
+          placeholder="sk-xxxxxxxxxxxxxxxx"
+          autocomplete="off"
+        />
+        <button id="toggleApiKey" class="toggle-btn">👁️</button>
+      </div>
+
+      <div class="form-group">
+        <label>默认分析模式</label>
+        <select id="defaultMode">
+          <option value="smartread-tldr">📝 TL;DR 一句话总结</option>
+          <option value="smartread-keypoints">📌 提取要点</option>
+          <option value="smartread-analysis" selected>🔍 详细分析</option>
+          <option value="smartread-plain">💡 通俗解释</option>
+        </select>
+      </div>
+
+      <button id="saveBtn" class="btn-primary">💾 保存设置</button>
+      <p id="saveMsg" class="save-msg"></p>
+
+      <div class="help-box">
+        <p><strong>💡 使用方式</strong></p>
+        <ol>
+          <li>在任意网页选中文本</li>
+          <li>右键菜单 → SmartRead</li>
+          <li>选择分析模式</li>
+          <li>等待 AI 流式输出结果</li>
+        </ol>
+        <a href="https://platform.deepseek.com/api_keys" target="_blank" class="link">
+          🔗 获取 DeepSeek API Key →
+        </a>
+      </div>
+    </div>
+
+    <!-- Usage Tab -->
+    <div id="tab-usage" class="tab-content" style="display:none;">
+      <div class="usage-card">
+        <div class="usage-stat">
+          <span class="usage-number" id="usageCount">0</span>
+          <span class="usage-label">今日已用</span>
+        </div>
+        <div class="usage-stat">
+          <span class="usage-number" id="usageRemaining">10</span>
+          <span class="usage-label">剩余次数</span>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <p class="tier-info">🎁 免费版：每天 10 次 | Pro 版：¥29/月 无限次</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

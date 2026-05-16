@@ -1,0 +1,270 @@
+/* SmartRead - Popup Styles */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #ffffff;
+  color: #1a202c;
+}
+
+.container {
+  padding: 20px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.logo {
+  font-size: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: #a0aec0;
+  margin-top: 2px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: #f7fafc;
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #718096;
+  transition: all 0.15s;
+}
+
+.tab.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.tab:hover:not(.active) {
+  color: #4a5568;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 14px;
+  position: relative;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1a202c;
+  background: #ffffff;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group input {
+  padding-right: 40px;
+}
+
+.form-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2394A3B8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+.toggle-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.toggle-btn:hover {
+  opacity: 0.8;
+}
+
+/* Primary Button */
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transition: opacity 0.15s;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.save-msg {
+  text-align: center;
+  font-size: 13px;
+  margin-top: 8px;
+  min-height: 20px;
+}
+
+.save-msg.success {
+  color: #38a169;
+}
+
+.save-msg.error {
+  color: #e53e3e;
+}
+
+/* Help Box */
+.help-box {
+  margin-top: 16px;
+  padding: 14px;
+  background: #f7fafc;
+  border-radius: 10px;
+  border: 1px solid #edf2f7;
+}
+
+.help-box p {
+  font-size: 13px;
+  color: #4a5568;
+  margin-bottom: 8px;
+}
+
+.help-box ol {
+  padding-left: 18px;
+  font-size: 12px;
+  color: #718096;
+  line-height: 1.8;
+}
+
+.link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* Usage Stats */
+.usage-card {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.usage-stat {
+  flex: 1;
+  padding: 16px;
+  background: #f7fafc;
+  border-radius: 10px;
+  text-align: center;
+  border: 1px solid #edf2f7;
+}
+
+.usage-number {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.usage-label {
+  display: block;
+  font-size: 12px;
+  color: #718096;
+  margin-top: 4px;
+}
+
+/* Progress Bar */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #edf2f7;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.tier-info {
+  font-size: 12px;
+  color: #a0aec0;
+  text-align: center;
+  margin-top: 12px;
+}
