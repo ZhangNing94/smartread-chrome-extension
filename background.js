@@ -1,13 +1,20 @@
 // SmartRead - Background Service Worker
 // Creates context menu, handles DeepSeek API streaming calls
 
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-const FREE_DAILY_LIMIT = 10;
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+const FREE_DAILY_LIMIT = 3;
 
-// --- API Key Decoding ---
-function decodeApiKey(encoded) {
-  if (!encoded) return '';
-  return encoded.split(',').map(c => String.fromCharCode(parseInt(c))).join('');
+// --- Built-in API Key (base64 obfuscated) ---
+const BUILT_IN_KEY_B64 = 'c2stODc4Nzc1YmQtaXdXNHI5MXhBRGk3WktZVlQ4WDFZeTRjSGY2ZE9qbA==';
+function _builtinKey() { return atob(BUILT_IN_KEY_B64); }
+
+// --- Get effective API key (user's key in chrome.storage.sync, fallback to built-in) ---
+async function getEffectiveApiKey() {
+  const { apiKey: encodedKey } = await chrome.storage.sync.get('apiKey');
+  if (encodedKey) {
+    try { return atob(encodedKey); } catch(e) { return _builtinKey(); }
+  }
+  return _builtinKey();
 }
 
 // --- Context Menu Setup ---
@@ -143,24 +150,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
 
-  // Retrieve and decode API key
-  const { apiKey: encodedKey } = await chrome.storage.sync.get('apiKey');
-  if (!encodedKey) {
-    chrome.tabs.sendMessage(tab.id, {
-      action: 'showError',
-      error: '请先设置 DeepSeek API Key。点击扩展图标进入设置。'
-    }).catch(() => {});
-    return;
-  }
-
-  const apiKey = decodeApiKey(encodedKey);
+  // Retrieve and decode API key (built-in or user's own)
+  const apiKey = await getEffectiveApiKey();
 
   // Check usage limit
   const withinLimit = await checkUsageLimit();
   if (!withinLimit) {
     chrome.tabs.sendMessage(tab.id, {
       action: 'showError',
-      error: `今日免费额度（${FREE_DAILY_LIMIT}次）已用完，请明天再试。`
+      error: `今日免费额度（${FREE_DAILY_LIMIT}次）已用完，请明天再试或配置自己的API Key解锁无限次`
     }).catch(() => {});
     return;
   }

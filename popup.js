@@ -1,13 +1,13 @@
 // SmartRead - Popup Script
 
-// --- API Key Encoding/Decoding ---
+// --- API Key Encoding/Decoding (base64) ---
 function encodeApiKey(key) {
-  return key.split('').map(c => c.charCodeAt(0)).join(',');
+  try { return btoa(key); } catch(e) { return ''; }
 }
 
 function decodeApiKey(encoded) {
   if (!encoded) return '';
-  return encoded.split(',').map(c => String.fromCharCode(parseInt(c))).join('');
+  try { return atob(encoded); } catch(e) { return ''; }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,22 +40,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKey = document.getElementById('apiKey').value.trim();
     const defaultMode = document.getElementById('defaultMode').value;
 
-    if (!apiKey) {
-      showMsg('请输入 API Key', 'error');
-      return;
-    }
-
-    if (!apiKey.startsWith('sk-')) {
+    if (apiKey && !apiKey.startsWith('sk-')) {
       showMsg('API Key 格式错误，应以 sk- 开头', 'error');
       return;
     }
 
-    // Encode before storing - hide from plain-text storage
-    const encodedKey = encodeApiKey(apiKey);
-    chrome.storage.sync.set({
-      apiKey: encodedKey,
-      defaultMode: defaultMode
-    }, () => {
+    // Encode key as base64 if provided (optional — built-in key works without this)
+    const data = { defaultMode };
+    if (apiKey) data.apiKey = encodeApiKey(apiKey);
+    chrome.storage.sync.set(data, () => {
       showMsg('✅ 设置已保存', 'success');
     });
   });
@@ -89,11 +82,11 @@ function loadUsage() {
     const today = new Date().toDateString();
     const isToday = result.lastResetDate === today;
     const count = isToday ? (result.usageCount || 0) : 0;
-    const remaining = Math.max(0, 10 - count);
+    const remaining = Math.max(0, 3 - count);
 
     document.getElementById('usageCount').textContent = count;
     document.getElementById('usageRemaining').textContent = remaining;
-    document.getElementById('progressFill').style.width = `${(count / 10) * 100}%`;
+    document.getElementById('progressFill').style.width = `${(count / 3) * 100}%`;
   });
 }
 
