@@ -1,43 +1,55 @@
-{
-  "manifest_version": 3,
-  "name": "SmartRead - AI 网页摘要助手",
-  "version": "1.0.0",
-  "description": "选中网页内容，AI一键生成摘要、要点提取和通俗解释",
-  "permissions": [
-    "storage",
-    "activeTab",
-    "contextMenus"
-  ],
-  "host_permissions": [
-    "https://api.deepseek.com/*"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["icons/*"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+﻿{
+    "manifest_version":  3,
+    "name":  "SmartRead - AI 网页摘要助手",
+    "version":  "1.0.0",
+    "description":  "选中网页内容，AI一键生成摘要、要点提取和通俗解释",
+    "permissions":  [
+                        "storage",
+                        "activeTab",
+                        "contextMenus"
+                    ],
+    "host_permissions":  [
+                             "https://api.deepseek.com/*"
+                         ],
+    "background":  {
+                       "service_worker":  "background.js"
+                   },
+    "action":  {
+                   "default_popup":  "popup.html",
+                   "default_icon":  {
+                                        "16":  "icons/icon16.png",
+                                        "48":  "icons/icon48.png",
+                                        "128":  "icons/icon128.png"
+                                    }
+               },
+    "icons":  {
+                  "16":  "icons/icon16.png",
+                  "48":  "icons/icon48.png",
+                  "128":  "icons/icon128.png"
+              },
+    "content_scripts":  [
+                            {
+                                "matches":  [
+                                                "\u003call_urls\u003e"
+                                            ],
+                                "js":  [
+                                           "content.js"
+                                       ],
+                                "css":  [
+                                            "content.css"
+                                        ]
+                            }
+                        ],
+    "web_accessible_resources":  [
+                                     {
+                                         "resources":  [
+                                                           "icons/*"
+                                                       ],
+                                         "matches":  [
+                                                         "\u003call_urls\u003e"
+                                                     ]
+                                     }
+                                 ],
+    "privacy_policy_url":  "https://zhangning94.github.io/smartread-chrome-extension/privacy.html",
+    "minimum_chrome_version":  "96"
 }
