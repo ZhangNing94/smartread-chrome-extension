@@ -10,7 +10,7 @@
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <span class="logo">🤖</span>
+      <span class="logo">📖</span>
       <div>
         <h1>SmartRead</h1>
         <p class="subtitle">AI 网页摘要助手</p>
@@ -20,6 +20,7 @@
     <!-- Tabs -->
     <div class="tabs">
       <button class="tab active" data-tab="settings">⚙️ 设置</button>
+      <button class="tab" data-tab="license">🔑 License</button>
       <button class="tab" data-tab="usage">📊 用量</button>
     </div>
 
@@ -27,12 +28,7 @@
     <div id="tab-settings" class="tab-content">
       <div class="form-group">
         <label for="apiKey">DeepSeek API Key</label>
-        <input
-          type="password"
-          id="apiKey"
-          placeholder="sk-xxxxxxxxxxxxxxxx"
-          autocomplete="off"
-        />
+        <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxx" autocomplete="off">
         <button id="toggleApiKey" class="toggle-btn">👁️</button>
       </div>
 
@@ -46,9 +42,6 @@
         </select>
       </div>
 
-      <button id="saveBtn" class="btn-primary">💾 保存设置</button>
-      <p id="saveMsg" class="save-msg"></p>
-
       <div class="help-box">
         <p><strong>💡 使用方式</strong></p>
         <ol>
@@ -57,9 +50,30 @@
           <li>选择分析模式</li>
           <li>等待 AI 流式输出结果</li>
         </ol>
-        <a href="https://platform.deepseek.com/api_keys" target="_blank" class="link">
-          🔗 获取 DeepSeek API Key →
-        </a>
+        <a href="https://platform.deepseek.com/api_keys" target="_blank" class="link">🔗 获取 DeepSeek API Key →</a>
+      </div>
+
+      <button id="saveBtn" class="btn-primary">💾 保存设置</button>
+      <p id="saveMsg" class="save-msg"></p>
+    </div>
+
+    <!-- License Tab -->
+    <div id="tab-license" class="tab-content" style="display:none;">
+      <div id="license-activated" class="license-activated" style="display:none;">
+        <div class="activated-badge">✅ Pro 已激活</div>
+        <p class="activated-info">无限次使用，无需担心用量</p>
+      </div>
+      <div id="license-trial" class="license-trial">
+        <p class="license-desc">🎁 试用剩余 <strong id="trialRemaining">5</strong> 次</p>
+      </div>
+      <div id="license-input" class="license-input-area">
+        <div class="form-group">
+          <label for="licenseKey">License Key</label>
+          <input type="text" id="licenseKey" placeholder="XXXX-XXXX-XXXX-XXXX">
+        </div>
+        <button id="activateBtn" class="btn-primary">🔓 激活 Pro</button>
+        <p id="licenseMsg" class="save-msg"></p>
+        <a href="https://5330159977060.gumroad.com/l/kdmkah" target="_blank" class="link buy-link">🛒 购买 Pro License →</a>
       </div>
     </div>
 
@@ -68,20 +82,22 @@
       <div class="usage-card">
         <div class="usage-stat">
           <span class="usage-number" id="usageCount">0</span>
-          <span class="usage-label">今日已用</span>
+          <span class="usage-label">试用已用</span>
         </div>
         <div class="usage-stat">
-          <span class="usage-number" id="usageRemaining">10</span>
+          <span class="usage-number" id="usageRemaining">5</span>
           <span class="usage-label">剩余次数</span>
         </div>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" id="progressFill"></div>
       </div>
-      <p class="tier-info">🎁 免费版：每天 10 次 | Pro 版：¥29/月 无限次</p>
+      <p class="tier-info">🎁 试用：5 次 | Pro：¥39 无限次</p>
     </div>
   </div>
 
+  <script src="license-config.js"></script>
+  <script src="license-manager.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

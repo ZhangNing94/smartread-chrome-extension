@@ -1,102 +1,153 @@
-// SmartRead - Popup Script
+// SmartRead — Popup UI with License integration
 
-// --- API Key Encoding/Decoding (base64) ---
-function encodeApiKey(key) {
-  try { return btoa(key); } catch(e) { return ''; }
+function encodeApiKey(key) { try { return btoa(key); } catch (e) { return ''; } }
+function decodeApiKey(encoded) { try { return atob(encoded); } catch (e) { return ''; } }
+function showMsg(id, text, isError) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'save-msg ' + (isError ? 'error' : 'success');
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
 }
 
-function decodeApiKey(encoded) {
-  if (!encoded) return '';
-  try { return atob(encoded); } catch(e) { return ''; }
-}
+let lm = null;
+let usageRemainingEl, usageCountEl, progressFillEl;
 
-document.addEventListener('DOMContentLoaded', () => {
-  // --- Load saved settings ---
-  loadSettings();
-  loadUsage();
+document.addEventListener('DOMContentLoaded', async () => {
+  usageRemainingEl = document.getElementById('usageRemaining');
+  usageCountEl = document.getElementById('usageCount');
+  progressFillEl = document.getElementById('progressFill');
 
-  // --- Tab switching ---
+  // Init LicenseManager
+  if (window.LicenseManager) {
+    lm = new LicenseManager(window.LICENSE_CONFIG);
+  }
+
+  await loadSettings();
+  await loadLicenseStatus();
+
+  // Tab switching
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
       tab.classList.add('active');
-      document.getElementById(`tab-${tab.dataset.tab}`).style.display = 'block';
+      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+      document.getElementById('tab-' + tab.dataset.tab).style.display = '';
     });
   });
 
-  // --- Toggle API Key visibility ---
+  // Save settings
+  document.getElementById('saveBtn').addEventListener('click', saveSettings);
+
+  // Toggle API key visibility
   document.getElementById('toggleApiKey').addEventListener('click', () => {
-    const input = document.getElementById('apiKey');
-    if (input.type === 'password') {
-      input.type = 'text';
-    } else {
-      input.type = 'password';
-    }
+    const el = document.getElementById('apiKey');
+    el.type = el.type === 'password' ? 'text' : 'password';
+    document.getElementById('toggleApiKey').textContent = el.type === 'password' ? '👁️' : '🙈';
   });
 
-  // --- Save settings ---
-  document.getElementById('saveBtn').addEventListener('click', () => {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    const defaultMode = document.getElementById('defaultMode').value;
+  // Activate License
+  const activateBtn = document.getElementById('activateBtn');
+  if (activateBtn) {
+    activateBtn.addEventListener('click', activateLicense);
+  }
 
-    if (apiKey && !apiKey.startsWith('sk-')) {
-      showMsg('API Key 格式错误，应以 sk- 开头', 'error');
-      return;
-    }
-
-    // Encode key as base64 if provided (optional — built-in key works without this)
-    const data = { defaultMode };
-    if (apiKey) data.apiKey = encodeApiKey(apiKey);
-    chrome.storage.sync.set(data, () => {
-      showMsg('✅ 设置已保存', 'success');
+  // Dev: double-click remaining to reset trial
+  if (usageRemainingEl) {
+    usageRemainingEl.addEventListener('dblclick', async () => {
+      if (lm) { await lm.resetTrial(); }
+      await loadLicenseStatus();
+      showMsg('licenseMsg', '🔄 试用已重置（开发模式）', false);
     });
-  });
-
-  // --- Reset usage ---
-  document.getElementById('usageCount').addEventListener('dblclick', () => {
-    chrome.storage.local.set({ usageCount: 0, lastResetDate: '' }, () => {
-      loadUsage();
-      showMsg('✅ 用量已重置', 'success');
-    });
-  });
+  }
 });
 
-// --- Load settings ---
-function loadSettings() {
-  chrome.storage.sync.get(['apiKey', 'defaultMode'], (result) => {
-    if (result.apiKey) {
-      // Decode stored value
-      const decodedKey = decodeApiKey(result.apiKey);
-      document.getElementById('apiKey').value = decodedKey;
-    }
-    if (result.defaultMode) {
-      document.getElementById('defaultMode').value = result.defaultMode;
-    }
-  });
+async function loadSettings() {
+  const { apiKey, defaultMode } = await chrome.storage.sync.get(['apiKey', 'defaultMode']);
+  if (apiKey) {
+    document.getElementById('apiKey').value = decodeApiKey(apiKey);
+  }
+  if (defaultMode) {
+    document.getElementById('defaultMode').value = defaultMode;
+  }
 }
 
-// --- Load usage stats ---
-function loadUsage() {
-  chrome.storage.local.get(['usageCount', 'lastResetDate'], (result) => {
-    const today = new Date().toDateString();
-    const isToday = result.lastResetDate === today;
-    const count = isToday ? (result.usageCount || 0) : 0;
-    const remaining = Math.max(0, 3 - count);
+async function saveSettings() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (key && !key.startsWith('sk-')) {
+    showMsg('saveMsg', '❌ API Key 必须以 sk- 开头', true);
+    return;
+  }
 
-    document.getElementById('usageCount').textContent = count;
-    document.getElementById('usageRemaining').textContent = remaining;
-    document.getElementById('progressFill').style.width = `${(count / 3) * 100}%`;
+  const defaultMode = document.getElementById('defaultMode').value;
+  await chrome.storage.sync.set({
+    apiKey: key ? encodeApiKey(key) : '',
+    defaultMode
   });
+  showMsg('saveMsg', '✅ 设置已保存', false);
 }
 
-// --- Show message ---
-function showMsg(text, type) {
-  const msgEl = document.getElementById('saveMsg');
-  msgEl.textContent = text;
-  msgEl.className = `save-msg ${type}`;
-  setTimeout(() => {
-    msgEl.textContent = '';
-    msgEl.className = 'save-msg';
-  }, 3000);
+async function loadLicenseStatus() {
+  if (!lm) return;
+
+  const activated = await lm.isActivated();
+  const counts = await lm.getUsageCounts();
+
+  const activatedEl = document.getElementById('license-activated');
+  const trialEl = document.getElementById('license-trial');
+  const inputEl = document.getElementById('license-input');
+
+  if (activated) {
+    if (activatedEl) activatedEl.style.display = '';
+    if (trialEl) trialEl.style.display = 'none';
+    if (inputEl) inputEl.style.display = 'none';
+    if (usageRemainingEl) usageRemainingEl.textContent = '∞';
+    if (usageCountEl) usageCountEl.textContent = '—';
+    if (progressFillEl) progressFillEl.style.width = '100%';
+  } else {
+    if (activatedEl) activatedEl.style.display = 'none';
+    if (trialEl) trialEl.style.display = '';
+    if (inputEl) inputEl.style.display = '';
+
+    const used = counts.used || 0;
+    const total = counts.limit || 5;
+    const remaining = Math.max(0, total - used);
+    const pct = Math.min(100, Math.round((used / total) * 100));
+
+    document.getElementById('trialRemaining').textContent = remaining;
+    if (usageRemainingEl) usageRemainingEl.textContent = remaining;
+    if (usageCountEl) usageCountEl.textContent = used;
+    if (progressFillEl) progressFillEl.style.width = pct + '%';
+  }
+}
+
+async function activateLicense() {
+  const key = document.getElementById('licenseKey').value.trim();
+  if (!key) {
+    showMsg('licenseMsg', '❌ 请输入 License Key', true);
+    return;
+  }
+  if (!/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(key)) {
+    showMsg('licenseMsg', '❌ License Key 格式错误，应为 XXXX-XXXX-XXXX-XXXX', true);
+    return;
+  }
+
+  document.getElementById('activateBtn').disabled = true;
+  document.getElementById('activateBtn').textContent = '⏳ 验证中...';
+  showMsg('licenseMsg', '⏳ 正在验证 License...', false);
+
+  try {
+    const result = await chrome.runtime.sendMessage({ action: 'verifyLicense', licenseKey: key });
+    if (result.success) {
+      showMsg('licenseMsg', '✅ License 激活成功！Pro 版已解锁', false);
+      setTimeout(() => loadLicenseStatus(), 500);
+    } else {
+      showMsg('licenseMsg', '❌ ' + (result.error || '激活失败，请检查 License Key'), true);
+    }
+  } catch (e) {
+    showMsg('licenseMsg', '❌ 验证失败：' + e.message, true);
+  } finally {
+    document.getElementById('activateBtn').disabled = false;
+    document.getElementById('activateBtn').textContent = '🔓 激活 Pro';
+  }
 }

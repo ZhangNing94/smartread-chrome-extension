@@ -1,8 +1,10 @@
 // SmartRead - Background Service Worker
-// Creates context menu, handles DeepSeek API streaming calls
+// Creates context menu, handles DeepSeek API streaming calls, License verification
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
-const FREE_DAILY_LIMIT = 3;
+const TRIAL_LIMIT = 5;
+const GUMROAD_URL = 'https://api.gumroad.com/v2/licenses/verify';
+const PRODUCT_PERMALINK = 'kdmkah';
 
 // --- Built-in API Key (base64 obfuscated) ---
 const BUILT_IN_KEY_B64 = 'c2stODc4Nzc1YmQtaXdXNHI5MXhBRGk3WktZVlQ4WDFZeTRjSGY2ZE9qbA==';
@@ -21,7 +23,7 @@ async function getEffectiveApiKey() {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'smartread-parent',
-    title: '🤖 SmartRead - AI 分析',
+    title: '📖 SmartRead - AI 分析',
     contexts: ['selection']
   });
   chrome.contextMenus.create({
@@ -58,22 +60,104 @@ const PROMPTS = {
   'smartread-plain': (text) => `你是一个科普助手。请把以下网页内容，用小学生都能理解的通俗语言解释清楚。避免专业术语，如果必须用则加括号解释。用友好的语气输出：\n\n${text}`
 };
 
-// --- Usage Tracking ---
-async function checkUsageLimit() {
-  const { usageCount = 0, lastResetDate = '' } = await chrome.storage.local.get(['usageCount', 'lastResetDate']);
-  const today = new Date().toDateString();
+// --- License Verification (inline in service worker) ---
+async function isLicenseActivated() {
+  const { lm_activated, lm_dispute_checked } = await chrome.storage.local.get(['lm_activated', 'lm_dispute_checked']);
+  if (!lm_activated || !lm_activated.licenseKey) return false;
 
-  if (lastResetDate !== today) {
-    await chrome.storage.local.set({ usageCount: 0, lastResetDate: today });
-    return true;
+  // Periodic dispute check (every 7 days)
+  const now = Date.now();
+  const lastCheck = lm_dispute_checked || 0;
+  if (now - lastCheck > 7 * 24 * 60 * 60 * 1000) {
+    const stillValid = await checkGumroadLicense(lm_activated.licenseKey);
+    if (!stillValid) {
+      await chrome.storage.local.remove(['lm_activated', 'lm_trial_count']);
+      await chrome.storage.local.set({ lm_dispute_checked: now });
+      return false;
+    }
+    await chrome.storage.local.set({ lm_dispute_checked: now });
   }
+  return true;
+}
 
-  return usageCount < FREE_DAILY_LIMIT;
+async function checkGumroadLicense(licenseKey) {
+  try {
+    const resp = await fetch(GUMROAD_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_permalink: PRODUCT_PERMALINK, license_key: licenseKey, increment_uses_count: false })
+    });
+    const data = await resp.json();
+    return data.success && !data.uses.cancelled_at && !data.uses.refunded_at;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyLicenseKey(licenseKey) {
+  try {
+    const resp = await fetch(GUMROAD_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_permalink: PRODUCT_PERMALINK, license_key: licenseKey, increment_uses_count: true })
+    });
+    const data = await resp.json();
+    if (!data.success) {
+      return { success: false, error: data.error || '无效的 License Key' };
+    }
+    if (data.uses.cancelled_at) return { success: false, error: '此 License 已被取消' };
+    if (data.uses.refunded_at) return { success: false, error: '此 License 已退款' };
+
+    // Count unique devices
+    const deviceId = generateDeviceId();
+    const { lm_device_ids = [] } = await chrome.storage.local.get('lm_device_ids');
+    const newDevices = [...new Set([...lm_device_ids, deviceId])];
+    if (newDevices.length > 2) {
+      return { success: false, error: '此 License 已超过2台设备限制' };
+    }
+
+    // Activate
+    await chrome.storage.local.set({
+      lm_activated: { licenseKey, activatedAt: Date.now() },
+      lm_device_ids: newDevices,
+      lm_dispute_checked: Date.now()
+    });
+    await chrome.storage.local.remove('lm_trial_count');
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: '网络错误，请检查网络连接' };
+  }
+}
+
+function generateDeviceId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let id = '';
+  for (let i = 0; i < 32; i++) {
+    id += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return id;
+}
+
+// --- Lifetime Trial Usage Tracking ---
+async function getUserUsage() {
+  const { lm_trial_count = 0 } = await chrome.storage.local.get('lm_trial_count');
+  return lm_trial_count;
+}
+
+async function checkUsageLimit() {
+  const activated = await isLicenseActivated();
+  if (activated) return true;
+
+  const used = await getUserUsage();
+  return used < TRIAL_LIMIT;
 }
 
 async function incrementUsage() {
-  const { usageCount = 0 } = await chrome.storage.local.get('usageCount');
-  await chrome.storage.local.set({ usageCount: usageCount + 1 });
+  const activated = await isLicenseActivated();
+  if (activated) return; // Pro users don't track usage
+
+  const used = await getUserUsage();
+  await chrome.storage.local.set({ lm_trial_count: used + 1 });
 }
 
 // --- DeepSeek API Streaming Call ---
@@ -153,12 +237,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // Retrieve and decode API key (built-in or user's own)
   const apiKey = await getEffectiveApiKey();
 
-  // Check usage limit
+  // Check usage limit (lifetime trial or Pro)
   const withinLimit = await checkUsageLimit();
   if (!withinLimit) {
     chrome.tabs.sendMessage(tab.id, {
       action: 'showError',
-      error: `今日免费额度（${FREE_DAILY_LIMIT}次）已用完，请明天再试或配置自己的API Key解锁无限次`
+      error: `试用额度（${TRIAL_LIMIT}次）已用完，请购买 Pro License 解锁无限次使用`
     }).catch(() => {});
     return;
   }
@@ -166,7 +250,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // Notify content script to show loading
   chrome.tabs.sendMessage(tab.id, { action: 'showLoading' }).catch(() => {});
 
-  // Increment usage
+  // Increment usage (no-op for Pro users)
   await incrementUsage();
 
   // Get the prompt template
@@ -197,5 +281,29 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       action: 'showError',
       error: `调用失败: ${error.message}`
     }).catch(() => {});
+  }
+});
+
+// --- Message Handlers (for popup communication) ---
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'verifyLicense') {
+    verifyLicenseKey(message.licenseKey).then(sendResponse);
+    return true; // async
+  }
+  if (message.action === 'getLicenseStatus') {
+    (async () => {
+      const activated = await isLicenseActivated();
+      const used = await getUserUsage();
+      sendResponse({ activated, usageCount: used, limit: TRIAL_LIMIT });
+    })();
+    return true;
+  }
+  if (message.action === 'getUsage') {
+    (async () => {
+      const activated = await isLicenseActivated();
+      const used = await getUserUsage();
+      sendResponse({ activated, usageCount: used, limit: TRIAL_LIMIT });
+    })();
+    return true;
   }
 });
