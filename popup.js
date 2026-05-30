@@ -20,7 +20,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Init LicenseManager
   if (window.LicenseManager) {
-    lm = new LicenseManager(window.LICENSE_CONFIG);
+    lm = LicenseManager;
+    await lm.init(LICENSE_CONFIG);
   }
 
   await loadSettings();
@@ -55,9 +56,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Dev: double-click remaining to reset trial
   if (usageRemainingEl) {
     usageRemainingEl.addEventListener('dblclick', async () => {
-      if (lm) { await lm.resetTrial(); }
+      if (lm) {
+        await chrome.storage.local.set({ lm_trial_count: '0' });
+        await lm.init(LICENSE_CONFIG);
+      }
       await loadLicenseStatus();
-      showMsg('licenseMsg', '🔄 试用已重置（开发模式）', false);
+      showMsg('licenseMsg', '🔄 Trial reset (dev mode)', false);
     });
   }
 });
@@ -75,7 +79,7 @@ async function loadSettings() {
 async function saveSettings() {
   const key = document.getElementById('apiKey').value.trim();
   if (key && !key.startsWith('sk-')) {
-    showMsg('saveMsg', '❌ API Key 必须以 sk- 开头', true);
+    showMsg('saveMsg', '❌ API Key must start with sk-', true);
     return;
   }
 
@@ -84,14 +88,14 @@ async function saveSettings() {
     apiKey: key ? encodeApiKey(key) : '',
     defaultMode
   });
-  showMsg('saveMsg', '✅ 设置已保存', false);
+  showMsg('saveMsg', '✅ Settings saved', false);
 }
 
 async function loadLicenseStatus() {
   if (!lm) return;
 
   const activated = await lm.isActivated();
-  const counts = await lm.getUsageCounts();
+  const status = lm.getStatus();
 
   const activatedEl = document.getElementById('license-activated');
   const trialEl = document.getElementById('license-trial');
@@ -109,8 +113,8 @@ async function loadLicenseStatus() {
     if (trialEl) trialEl.style.display = '';
     if (inputEl) inputEl.style.display = '';
 
-    const used = counts.used || 0;
-    const total = counts.limit || 5;
+    const used = status.used || 0;
+    const total = status.limit || 5;
     const remaining = Math.max(0, total - used);
     const pct = Math.min(100, Math.round((used / total) * 100));
 
@@ -124,30 +128,30 @@ async function loadLicenseStatus() {
 async function activateLicense() {
   const key = document.getElementById('licenseKey').value.trim();
   if (!key) {
-    showMsg('licenseMsg', '❌ 请输入 License Key', true);
+    showMsg('licenseMsg', '❌ Please enter License Key', true);
     return;
   }
   if (!/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/.test(key)) {
-    showMsg('licenseMsg', '❌ License Key 格式错误，应为 XXXX-XXXX-XXXX-XXXX', true);
+    showMsg('licenseMsg', '❌ Invalid License Key format (XXXX-XXXX-XXXX-XXXX)', true);
     return;
   }
 
   document.getElementById('activateBtn').disabled = true;
-  document.getElementById('activateBtn').textContent = '⏳ 验证中...';
-  showMsg('licenseMsg', '⏳ 正在验证 License...', false);
+  document.getElementById('activateBtn').textContent = '⏳ Verifying...';
+  showMsg('licenseMsg', '⏳ Verifying License...', false);
 
   try {
     const result = await chrome.runtime.sendMessage({ action: 'verifyLicense', licenseKey: key });
     if (result.success) {
-      showMsg('licenseMsg', '✅ License 激活成功！Pro 版已解锁', false);
+      showMsg('licenseMsg', '✅ License activated! Pro unlocked', false);
       setTimeout(() => loadLicenseStatus(), 500);
     } else {
-      showMsg('licenseMsg', '❌ ' + (result.error || '激活失败，请检查 License Key'), true);
+      showMsg('licenseMsg', '❌ ' + (result.error || 'Activation failed, please check License Key'), true);
     }
   } catch (e) {
-    showMsg('licenseMsg', '❌ 验证失败：' + e.message, true);
+    showMsg('licenseMsg', '❌ Verification failed: ' + e.message, true);
   } finally {
     document.getElementById('activateBtn').disabled = false;
-    document.getElementById('activateBtn').textContent = '🔓 激活 Pro';
+    document.getElementById('activateBtn').textContent = '🔓 Activate Pro';
   }
 }
